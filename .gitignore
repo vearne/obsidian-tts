@@ -4,3 +4,4 @@ main.js.map
 .DS_Store
 graphify-out/
 .idea/vcs.xml
+data.json
