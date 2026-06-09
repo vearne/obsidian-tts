@@ -7,6 +7,7 @@ import { GoogleProvider } from "./providers/google";
 import { ElevenLabsProvider } from "./providers/elevenlabs";
 import { ZhipuProvider } from "./providers/zhipu";
 import { BaiduProvider } from "./providers/baidu";
+import { AliyunProvider } from "./providers/aliyun";
 
 export class ProviderRegistry {
 	private settings: ObsidianTtsSettings;
@@ -55,6 +56,8 @@ export class ProviderRegistry {
 				return new ZhipuProvider(s.zhipu);
 			case "baidu":
 				return this.baiduProvider;
+			case "aliyun":
+				return new AliyunProvider(s.aliyun);
 			default:
 				return new EdgeProvider(s.edge, s.showNotices);
 		}
