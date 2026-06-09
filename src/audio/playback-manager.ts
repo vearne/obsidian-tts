@@ -9,6 +9,24 @@ export interface PlaybackState {
 	title: string;
 	currentTime: number;
 	duration: number;
+	canTogglePause: boolean;
+	canStop: boolean;
+	canSeek: boolean;
+}
+
+export function buildPlaybackState(
+	fields: Omit<PlaybackState, "canTogglePause" | "canStop" | "canSeek">
+): PlaybackState {
+	const canSeek = fields.duration > 0 && Number.isFinite(fields.duration);
+	const hasActiveSession =
+		fields.totalSegments > 0 &&
+		(fields.isPlaying || fields.isPaused || fields.duration > 0);
+	return {
+		...fields,
+		canTogglePause: hasActiveSession,
+		canStop: hasActiveSession,
+		canSeek,
+	};
 }
 
 type StateCallback = (state: PlaybackState) => void;
@@ -167,6 +185,10 @@ export class PlaybackManager {
 		}
 	}
 
+	isPaused(): boolean {
+		return this.paused;
+	}
+
 	isActive(): boolean {
 		return this.buffers.length > 0 && !this.stopped;
 	}
@@ -227,27 +249,31 @@ export class PlaybackManager {
 	}
 
 	private emitState(isPlaying: boolean, _isPaused?: boolean): void {
-		this.stateCallback?.({
-			isPlaying,
-			isPaused: this.paused,
-			currentSegment: this.currentIndex + 1,
-			totalSegments: this.buffers.length,
-			title: this.title,
-			currentTime: this.audio?.currentTime ?? 0,
-			duration: this.audio?.duration ?? 0,
-		});
+		this.stateCallback?.(
+			buildPlaybackState({
+				isPlaying,
+				isPaused: this.paused,
+				currentSegment: this.currentIndex + 1,
+				totalSegments: this.buffers.length,
+				title: this.title,
+				currentTime: this.audio?.currentTime ?? 0,
+				duration: this.audio?.duration ?? 0,
+			})
+		);
 	}
 
 	updateProgressFromEngine(progress: SynthesisProgress): void {
-		this.stateCallback?.({
-			isPlaying: progress.status === "playing",
-			isPaused: this.paused,
-			currentSegment: progress.current,
-			totalSegments: progress.total,
-			title: this.title,
-			currentTime: 0,
-			duration: 0,
-		});
+		this.stateCallback?.(
+			buildPlaybackState({
+				isPlaying: progress.status === "playing",
+				isPaused: this.paused,
+				currentSegment: progress.current,
+				totalSegments: progress.total,
+				title: this.title,
+				currentTime: 0,
+				duration: 0,
+			})
+		);
 	}
 
 	private checkStreamingCompletion(): void {

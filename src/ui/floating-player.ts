@@ -102,9 +102,38 @@ export class FloatingPlayer {
 			}
 		}
 
+		const pauseBtn = this.container.querySelector(".obsidian-tts-player-pause");
+		const stopBtn = this.container.querySelector(".obsidian-tts-player-stop");
+		const forwardBtn = this.container.querySelector(".obsidian-tts-player-forward");
+		const backwardBtn = this.container.querySelector(".obsidian-tts-player-backward");
+
 		if (pauseIcon) {
 			setIcon(pauseIcon as HTMLElement, state.isPaused ? "play" : "pause");
 		}
+		if (pauseBtn) {
+			pauseBtn.setAttribute(
+				"aria-label",
+				state.isPaused ? "继续播放" : "暂停"
+			);
+			pauseBtn.setAttribute(
+				"title",
+				state.isPaused ? "继续播放" : "暂停"
+			);
+		}
+
+		this.setControlDisabled(pauseBtn, !state.canTogglePause);
+		this.setControlDisabled(stopBtn, !state.canStop);
+		this.setControlDisabled(forwardBtn, !state.canSeek);
+		this.setControlDisabled(backwardBtn, !state.canSeek);
+		if (seekSlider) {
+			seekSlider.disabled = !state.canSeek;
+		}
+	}
+
+	private setControlDisabled(el: Element | null, disabled: boolean): void {
+		if (!el) return;
+		el.classList.toggle("is-disabled", disabled);
+		el.setAttribute("aria-disabled", disabled ? "true" : "false");
 	}
 
 	updateQueue(): void {
@@ -165,6 +194,8 @@ export class FloatingPlayer {
 
 		const pauseBtn = document.createElement("span");
 		pauseBtn.className = "obsidian-tts-player-pause";
+		pauseBtn.setAttribute("aria-label", "暂停");
+		pauseBtn.setAttribute("title", "暂停");
 		const pauseIcon = document.createElement("span");
 		pauseIcon.className = "obsidian-tts-player-pause-icon";
 		setIcon(pauseIcon, "pause");

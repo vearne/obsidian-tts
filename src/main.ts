@@ -8,7 +8,7 @@ import {
 	TAbstractFile,
 	TFile,
 } from "obsidian";
-import { PlaybackManager } from "./audio/playback-manager";
+import { buildPlaybackState, PlaybackManager } from "./audio/playback-manager";
 import { QueueManager } from "./audio/queue-manager";
 import {
 	DEFAULT_SETTINGS,
@@ -190,15 +190,17 @@ export default class ObsidianTtsPlugin extends Plugin {
 			id: "show-floating-player",
 			name: "显示浮动播放器",
 			callback: () => {
-				this.floatingPlayer.show({
-					isPlaying: this.isReading,
-					isPaused: false,
-					currentSegment: 0,
-					totalSegments: 0,
-					title: "",
-					currentTime: 0,
-					duration: 0,
-				});
+				this.floatingPlayer.show(
+					buildPlaybackState({
+						isPlaying: this.isReading,
+						isPaused: this.playbackManager.isPaused(),
+						currentSegment: 0,
+						totalSegments: 0,
+						title: "",
+						currentTime: 0,
+						duration: 0,
+					})
+				);
 			},
 		});
 
@@ -380,15 +382,17 @@ export default class ObsidianTtsPlugin extends Plugin {
 			await this.ttsEngine.synthesizeAll(text, (progress) => {
 				this.playbackManager.updateProgressFromEngine(progress);
 				if (!this.settings.disableFloatingPlayer && !playbackStarted) {
-					this.floatingPlayer.update({
-						isPlaying: progress.status !== "stopped",
-						isPaused: false,
-						currentSegment: progress.current,
-						totalSegments: progress.total,
-						title,
-						currentTime: 0,
-						duration: 0,
-					});
+					this.floatingPlayer.update(
+						buildPlaybackState({
+							isPlaying: progress.status !== "stopped",
+							isPaused: this.playbackManager.isPaused(),
+							currentSegment: progress.current,
+							totalSegments: progress.total,
+							title,
+							currentTime: 0,
+							duration: 0,
+						})
+					);
 				}
 			}, (buffer) => {
 				playbackStarted = true;

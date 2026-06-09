@@ -56,6 +56,22 @@
 	background: var(--background-modifier-hover);
 }
 
+.obsidian-tts-player-pause.is-disabled,
+.obsidian-tts-player-stop.is-disabled,
+.obsidian-tts-player-forward.is-disabled,
+.obsidian-tts-player-backward.is-disabled {
+	opacity: 0.35;
+	cursor: default;
+	pointer-events: none;
+}
+
+.obsidian-tts-player-pause.is-disabled:hover,
+.obsidian-tts-player-stop.is-disabled:hover,
+.obsidian-tts-player-forward.is-disabled:hover,
+.obsidian-tts-player-backward.is-disabled:hover {
+	background: none;
+}
+
 .obsidian-tts-player-body {
 	display: flex;
 	align-items: center;
@@ -84,6 +100,11 @@
 	border-radius: 2px;
 	outline: none;
 	cursor: pointer;
+}
+
+.obsidian-tts-player-seek:disabled {
+	opacity: 0.35;
+	cursor: default;
 }
 
 .obsidian-tts-player-seek::-webkit-slider-thumb {
