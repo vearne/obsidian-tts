@@ -32,8 +32,11 @@ export async function embedMp3InNote(
 	editor.replaceRange(`\n${link}\n`, cursor);
 }
 
-export function getAudioFormat(settingsProvider: string, zhipuFormat?: string): "mp3" | "wav" {
+export function getAudioFormat(settingsProvider: string, zhipuFormat?: string, aliyunFormat?: string): "mp3" | "wav" {
 	if (settingsProvider === "zhipu" && zhipuFormat === "wav") {
+		return "wav";
+	}
+	if (settingsProvider === "aliyun" && aliyunFormat === "wav") {
 		return "wav";
 	}
 	return "mp3";

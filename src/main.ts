@@ -362,7 +362,8 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 			const format = getAudioFormat(
 				this.settings.activeProvider,
-				this.settings.zhipu.responseFormat
+				this.settings.zhipu.responseFormat,
+				this.settings.aliyun.format
 			);
 
 			const buffers = await this.ttsEngine.synthesizeAll(text, (progress) => {

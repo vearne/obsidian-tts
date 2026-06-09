@@ -15,7 +15,7 @@ export async function loggedRequest(
 	});
 
 	try {
-		const response = await requestUrl(params);
+		const response = await requestUrl({ ...params, throw: false });
 		const contentType =
 			response.headers?.["content-type"] ??
 			response.headers?.["Content-Type"] ??
