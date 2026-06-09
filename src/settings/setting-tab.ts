@@ -1,7 +1,6 @@
-import { App, Notice, Platform, TFile } from "obsidian";
+import { App, PluginSettingTab, Setting, Platform } from "obsidian";
 import type ObsidianTtsPlugin from "../main";
 import {
-	DEFAULT_SETTINGS,
 	ObsidianTtsSettings,
 	PROVIDER_LABELS,
 	ProviderId,
@@ -81,6 +80,16 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(this.containerEl)
+			.setName("调试日志")
+			.setDesc("在开发者控制台输出 TTS 请求详情（含 URL、状态码等，密钥已脱敏）")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.enableDebugLog).onChange(async (v) => {
+					this.plugin.settings.enableDebugLog = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(this.containerEl)
 			.setName("显示状态栏按钮")
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.showStatusBarButton).onChange(async (v) => {
@@ -122,7 +131,8 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 				d.addOption("proxy", "仅代理");
 				d.setValue(this.plugin.settings.edge.connectionMode);
 				d.onChange(async (v) => {
-					this.plugin.settings.edge.connectionMode = v as ObsidianTtsSettings["edge"]["connectionMode"];
+					this.plugin.settings.edge.connectionMode =
+						v as ObsidianTtsSettings["edge"]["connectionMode"];
 					await this.plugin.saveSettings();
 				});
 			});
@@ -297,7 +307,7 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 		new Setting(this.containerEl)
 			.setName("音色")
 			.addDropdown((d) => {
-				for (const v of ZHIPU_VOICES) d.addOption(v, v);
+				for (const v of ZHIPU_VOICES) d.addOption(v.id, v.label);
 				d.setValue(this.plugin.settings.zhipu.voice);
 				d.onChange(async (v) => {
 					this.plugin.settings.zhipu.voice = v;
@@ -305,10 +315,24 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 				});
 			});
 		new Setting(this.containerEl)
-			.setName("音量")
+			.setName("语速倍率")
+			.setDesc("与全局语速相乘，官方范围 0.5–2.0")
 			.addSlider((s) =>
 				s
-					.setLimits(0.1, 2.0, 0.1)
+					.setLimits(0.5, 2.0, 0.1)
+					.setValue(this.plugin.settings.zhipu.speed)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.zhipu.speed = v;
+						await this.plugin.saveSettings();
+					})
+			);
+		new Setting(this.containerEl)
+			.setName("音量")
+			.setDesc("官方范围 (0, 10]，默认 1.0")
+			.addSlider((s) =>
+				s
+					.setLimits(0.1, 10.0, 0.1)
 					.setValue(this.plugin.settings.zhipu.volume)
 					.setDynamicTooltip()
 					.onChange(async (v) => {
@@ -316,6 +340,19 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+		new Setting(this.containerEl)
+			.setName("输出格式")
+			.setDesc("官方支持 wav / pcm（非流式推荐 wav）。文档: docs.bigmodel.cn/cn/guide/models/sound-and-video/glm-tts")
+			.addDropdown((d) => {
+				d.addOption("wav", "WAV（推荐，可直接播放）");
+				d.addOption("pcm", "PCM（原始音频，浏览器可能无法直接播放）");
+				const fmt = this.plugin.settings.zhipu.responseFormat;
+				d.setValue(fmt === "pcm" ? "pcm" : "wav");
+				d.onChange(async (v) => {
+					this.plugin.settings.zhipu.responseFormat = v as "wav" | "pcm";
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 
 	private addBaiduSettings(): void {
@@ -412,6 +449,3 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 			});
 	}
 }
-
-// Re-export for type usage - fix import
-import { PluginSettingTab, Setting } from "obsidian";

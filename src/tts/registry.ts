@@ -30,7 +30,7 @@ export class ProviderRegistry {
 		const s = this.settings;
 		switch (id) {
 			case "edge":
-				return new EdgeProvider(s.edge);
+				return new EdgeProvider(s.edge, s.showNotices);
 			case "openai":
 				return new OpenAIProvider({
 					apiKey: s.openai.apiKey,
@@ -56,7 +56,7 @@ export class ProviderRegistry {
 			case "baidu":
 				return this.baiduProvider;
 			default:
-				return new EdgeProvider(s.edge);
+				return new EdgeProvider(s.edge, s.showNotices);
 		}
 	}
 }

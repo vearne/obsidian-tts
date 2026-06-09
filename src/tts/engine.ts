@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import type { ObsidianTtsSettings } from "../settings/types";
 import { preprocessText } from "../text/preprocessor";
+import { formatError, logError, logInfo } from "../utils/logger";
 import { chunkText } from "./chunker";
 import { ProviderRegistry } from "./registry";
 import { SynthesisOptions, concatArrayBuffers } from "./provider";
@@ -55,6 +56,13 @@ export class TTSEngine {
 		const isBaidu = provider.id === "baidu";
 		const chunks = chunkText(text, provider.getMaxChunkSize(), isBaidu);
 
+		logInfo("[engine] 开始合成", {
+			provider: provider.id,
+			chunks: chunks.length,
+			textLength: text.length,
+			rate: this.settings.playbackSpeed,
+		});
+
 		if (this.settings.showNotices && chunks.length > 1) {
 			new Notice(`长文本已分为 ${chunks.length} 段进行合成`, 3000);
 		}
@@ -82,12 +90,17 @@ export class TTSEngine {
 			try {
 				const buffer = await provider.synthesize(chunks[i], options);
 				buffers.push(buffer);
+				logInfo(`[engine] 段 ${i + 1}/${chunks.length} 完成`, {
+					bytes: buffer.byteLength,
+				});
 			} catch (err) {
+				const msg = formatError(err);
+				logError(`[engine] 段 ${i + 1}/${chunks.length} 失败`, err);
 				onProgress?.({
 					current: i + 1,
 					total: chunks.length,
 					status: "error",
-					message: err instanceof Error ? err.message : String(err),
+					message: msg,
 				});
 				throw err;
 			}
@@ -97,6 +110,12 @@ export class TTSEngine {
 			current: chunks.length,
 			total: chunks.length,
 			status: "done",
+		});
+
+		logInfo("[engine] 合成完成", {
+			provider: provider.id,
+			segments: buffers.length,
+			totalBytes: buffers.reduce((n, b) => n + b.byteLength, 0),
 		});
 
 		return buffers;

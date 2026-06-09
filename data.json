@@ -1,0 +1,72 @@
+{
+  "activeProvider": "edge",
+  "playbackSpeed": 1,
+  "showNotices": true,
+  "enableDebugLog": true,
+  "showStatusBarButton": true,
+  "showMenuItems": true,
+  "enableQueueFeature": true,
+  "disableFloatingPlayer": false,
+  "floatingPlayerPosition": null,
+  "textFiltering": {
+    "filterFrontmatter": true,
+    "filterMarkdownLinks": true,
+    "filterCodeBlocks": true,
+    "filterInlineCode": true,
+    "filterHtmlTags": true,
+    "filterImages": true,
+    "filterWikiLinks": true,
+    "filterCallouts": true
+  },
+  "edge": {
+    "voice": "zh-CN-YunxiNeural",
+    "connectionMode": "auto",
+    "proxyUrl": ""
+  },
+  "openai": {
+    "apiKey": "",
+    "model": "tts-1",
+    "voice": "alloy"
+  },
+  "openaiCompatible": {
+    "apiKey": "",
+    "baseUrl": "",
+    "model": "tts-1",
+    "voice": "zh-CN-XiaoxiaoNeural"
+  },
+  "azure": {
+    "apiKey": "",
+    "region": "eastasia",
+    "voice": "zh-CN-XiaoxiaoNeural"
+  },
+  "google": {
+    "apiKey": "",
+    "languageCode": "cmn-CN",
+    "voiceName": "cmn-CN-Wavenet-A"
+  },
+  "elevenlabs": {
+    "apiKey": "",
+    "voiceId": "21m00Tcm4TlvDq8ikWAM",
+    "modelId": "eleven_multilingual_v2"
+  },
+  "zhipu": {
+    "apiKey": "",
+    "voice": "tongtong",
+    "speed": 1,
+    "volume": 1,
+    "responseFormat": "wav"
+  },
+  "baidu": {
+    "apiKey": "",
+    "secretKey": "",
+    "voice": 0,
+    "speed": 5,
+    "pitch": 5,
+    "volume": 5
+  },
+  "mp3Export": {
+    "enabled": true,
+    "outputFolder": "TTS",
+    "embedInNote": true
+  }
+}

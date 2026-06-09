@@ -25,6 +25,7 @@ export interface ObsidianTtsSettings {
 	activeProvider: ProviderId;
 	playbackSpeed: number;
 	showNotices: boolean;
+	enableDebugLog: boolean;
 	showStatusBarButton: boolean;
 	showMenuItems: boolean;
 	enableQueueFeature: boolean;
@@ -75,7 +76,7 @@ export interface ObsidianTtsSettings {
 		voice: string;
 		speed: number;
 		volume: number;
-		responseFormat: "mp3" | "wav";
+		responseFormat: "wav" | "pcm";
 	};
 
 	baidu: {
@@ -98,6 +99,7 @@ export const DEFAULT_SETTINGS: ObsidianTtsSettings = {
 	activeProvider: "edge",
 	playbackSpeed: 1.0,
 	showNotices: true,
+	enableDebugLog: true,
 	showStatusBarButton: true,
 	showMenuItems: true,
 	enableQueueFeature: true,
@@ -157,7 +159,7 @@ export const DEFAULT_SETTINGS: ObsidianTtsSettings = {
 		voice: "tongtong",
 		speed: 1.0,
 		volume: 1.0,
-		responseFormat: "mp3",
+		responseFormat: "wav",
 	},
 
 	baidu: {
@@ -197,7 +199,18 @@ export const EDGE_VOICES = [
 
 export const OPENAI_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
 
-export const ZHIPU_VOICES = ["tongtong", "female", "male"];
+/** 官方文档: https://docs.bigmodel.cn/cn/guide/models/sound-and-video/glm-tts */
+export const ZHIPU_VOICES: { id: string; label: string }[] = [
+	{ id: "tongtong", label: "彤彤（默认）" },
+	{ id: "xiaochen", label: "小陈" },
+	{ id: "chuichui", label: "锤锤" },
+	{ id: "jam", label: "jam" },
+	{ id: "kazi", label: "kazi" },
+	{ id: "douji", label: "douji" },
+	{ id: "luodo", label: "luodo" },
+];
+
+export const ZHIPU_MAX_INPUT_CHARS = 1024;
 
 export const BAIDU_VOICES: { id: number; label: string }[] = [
 	{ id: 0, label: "度小美" },

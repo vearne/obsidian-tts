@@ -1,0 +1,125 @@
+.obsidian-tts-floating-player {
+	position: fixed;
+	bottom: 24px;
+	right: 24px;
+	z-index: 9999;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	padding: 8px 12px;
+	min-width: 220px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.obsidian-tts-player-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	cursor: move;
+	user-select: none;
+}
+
+.obsidian-tts-player-title {
+	font-weight: 600;
+	font-size: 13px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 160px;
+}
+
+.obsidian-tts-player-close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 16px;
+	color: var(--text-muted);
+	padding: 0 4px;
+}
+
+.obsidian-tts-player-body {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.obsidian-tts-player-progress {
+	font-size: 12px;
+	color: var(--text-muted);
+	flex: 1;
+}
+
+.obsidian-tts-player-pause,
+.obsidian-tts-player-stop {
+	padding: 4px 10px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	cursor: pointer;
+	font-size: 12px;
+}
+
+.obsidian-tts-player-pause:hover,
+.obsidian-tts-player-stop:hover {
+	background: var(--background-modifier-hover);
+}
+
+.obsidian-tts-queue-panel {
+	position: fixed;
+	bottom: 24px;
+	left: 24px;
+	z-index: 9998;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	padding: 8px 12px;
+	min-width: 240px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.obsidian-tts-queue-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+
+.obsidian-tts-queue-clear {
+	padding: 2px 8px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.obsidian-tts-queue-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.obsidian-tts-queue-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: 13px;
+}
+
+.obsidian-tts-queue-empty {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.obsidian-tts-status-bar {
+	cursor: pointer;
+}
+
+.obsidian-tts-status-bar.obsidian-tts-active {
+	color: var(--interactive-accent);
+}

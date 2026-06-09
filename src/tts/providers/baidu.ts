@@ -1,5 +1,6 @@
-import { requestUrl } from "obsidian";
 import type { ObsidianTtsSettings } from "../../settings/types";
+import { loggedRequest } from "../../utils/http";
+import { formatError, logError, logInfo } from "../../utils/logger";
 import { SynthesisOptions, TTSProvider } from "../provider";
 
 interface TokenCache {
@@ -42,24 +43,51 @@ export class BaiduProvider implements TTSProvider {
 			vol: String(this.config.volume),
 			aue: "3",
 		});
+		const body = params.toString();
 
-		const response = await requestUrl({
-			url: "https://tsn.baidu.com/text2audio",
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: params.toString(),
+		logInfo("[baidu] 合成请求", {
+			voice: this.config.voice,
+			textLength: text.length,
 		});
 
-		if (response.status >= 400) {
-			throw new Error(`百度 TTS 请求失败 (${response.status}): ${response.text}`);
-		}
+		try {
+			const response = await loggedRequest(
+				"baidu",
+				{
+					url: "https://tsn.baidu.com/text2audio",
+					method: "POST",
+					headers: { "Content-Type": "application/x-www-form-urlencoded" },
+					body,
+				},
+				`tex=${text.slice(0, 80)}...&per=${this.config.voice}`
+			);
 
-		const contentType = response.headers["content-type"] || "";
-		if (contentType.includes("application/json")) {
-			throw new Error(`百度 TTS 错误: ${response.text}`);
-		}
+			if (response.status >= 400) {
+				throw new Error(
+					`HTTP ${response.status}: ${response.text?.slice(0, 500) || "(无响应体)"}`
+				);
+			}
 
-		return response.arrayBuffer;
+			const contentType = response.headers["content-type"] || "";
+			if (contentType.includes("application/json")) {
+				throw new Error(`百度 TTS 错误: ${response.text}`);
+			}
+
+			const buf = response.arrayBuffer;
+			if (!buf || buf.byteLength === 0) {
+				throw new Error("响应体为空，未收到音频数据");
+			}
+			return buf;
+		} catch (err) {
+			logError("[baidu] 合成失败", err);
+			if (err instanceof Error && err.message.startsWith("HTTP ")) {
+				throw new Error(`百度 TTS 请求失败: ${err.message}`);
+			}
+			if (err instanceof Error && err.message.startsWith("百度 TTS 错误:")) {
+				throw err;
+			}
+			throw new Error(`百度 TTS 失败: ${formatError(err)}`);
+		}
 	}
 
 	getMaxChunkSize(): number {
@@ -82,23 +110,36 @@ export class BaiduProvider implements TTSProvider {
 			`&client_id=${encodeURIComponent(this.config.apiKey)}` +
 			`&client_secret=${encodeURIComponent(this.config.secretKey)}`;
 
-		const response = await requestUrl({ url, method: "POST" });
-		if (response.status >= 400) {
-			throw new Error(`百度 Token 获取失败: ${response.text}`);
-		}
+		logInfo("[baidu] 获取 access_token");
 
-		const json = response.json as {
-			access_token?: string;
-			expires_in?: number;
-		};
-		if (!json.access_token) {
-			throw new Error("百度 Token 响应无效");
-		}
+		try {
+			const response = await loggedRequest("baidu", { url, method: "POST" });
 
-		this.tokenCache = {
-			token: json.access_token,
-			expiresAt: now + (json.expires_in ?? 2592000) * 1000,
-		};
-		return json.access_token;
+			if (response.status >= 400) {
+				throw new Error(
+					`HTTP ${response.status}: ${response.text?.slice(0, 500) || "(无响应体)"}`
+				);
+			}
+
+			const json = response.json as {
+				access_token?: string;
+				expires_in?: number;
+			};
+			if (!json.access_token) {
+				throw new Error("百度 Token 响应无效");
+			}
+
+			this.tokenCache = {
+				token: json.access_token,
+				expiresAt: now + (json.expires_in ?? 2592000) * 1000,
+			};
+			return json.access_token;
+		} catch (err) {
+			logError("[baidu] Token 获取失败", err);
+			if (err instanceof Error && err.message.startsWith("HTTP ")) {
+				throw new Error(`百度 Token 获取失败: ${err.message}`);
+			}
+			throw new Error(`百度 Token 获取失败: ${formatError(err)}`);
+		}
 	}
 }

@@ -43,25 +43,35 @@ export class QueuePanel {
 
 	private render(): void {
 		if (!this.container) return;
-		const list = this.container.querySelector(".obsidian-tts-queue-list");
+		const list = this.container.querySelector(
+			".obsidian-tts-queue-list"
+		) as HTMLElement;
 		if (!list) return;
 
-		list.empty();
+		list.innerHTML = "";
 		const items = this.getItems();
 		if (items.length === 0) {
-			const empty = list.createEl("li", { cls: "obsidian-tts-queue-empty" });
+			const empty = document.createElement("li");
+			empty.className = "obsidian-tts-queue-empty";
 			empty.textContent = "队列为空";
+			list.appendChild(empty);
 			return;
 		}
 
 		for (const item of items) {
-			const li = list.createEl("li", { cls: "obsidian-tts-queue-item" });
-			li.createSpan({ text: item.title });
-			const btn = li.createEl("button", { text: "移除" });
+			const li = document.createElement("li");
+			li.className = "obsidian-tts-queue-item";
+			const span = document.createElement("span");
+			span.textContent = item.title;
+			li.appendChild(span);
+			const btn = document.createElement("button");
+			btn.textContent = "移除";
 			btn.addEventListener("click", () => {
 				this.onRemove(item.id);
 				this.render();
 			});
+			li.appendChild(btn);
+			list.appendChild(li);
 		}
 	}
 

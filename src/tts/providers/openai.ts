@@ -1,5 +1,6 @@
-import { requestUrl } from "obsidian";
 import { SynthesisOptions, TTSProvider } from "../provider";
+import { loggedRequest } from "../../utils/http";
+import { formatError, logError, logInfo } from "../../utils/logger";
 
 export interface OpenAIProviderConfig {
 	apiKey: string;
@@ -27,25 +28,54 @@ export class OpenAIProvider implements TTSProvider {
 		}
 
 		const url = `${this.config.baseUrl.replace(/\/$/, "")}/audio/speech`;
-		const response = await requestUrl({
-			url,
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${this.config.apiKey}`,
-			},
-			body: JSON.stringify({
-				model: this.config.model,
-				input: text,
-				voice: options.voice || this.config.defaultVoice,
-				speed: options.rate,
-			}),
+		const body = {
+			model: this.config.model,
+			input: text,
+			voice: options.voice || this.config.defaultVoice,
+			speed: options.rate,
+		};
+		const bodyStr = JSON.stringify(body);
+
+		logInfo(`[${this.id}] 合成请求`, {
+			baseUrl: this.config.baseUrl,
+			model: this.config.model,
+			voice: body.voice,
+			textLength: text.length,
 		});
 
-		if (response.status >= 400) {
-			throw new Error(`OpenAI TTS 请求失败 (${response.status}): ${response.text}`);
+		try {
+			const response = await loggedRequest(
+				this.id,
+				{
+					url,
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${this.config.apiKey}`,
+					},
+					body: bodyStr,
+				},
+				bodyStr
+			);
+
+			if (response.status >= 400) {
+				throw new Error(
+					`HTTP ${response.status}: ${response.text?.slice(0, 500) || "(无响应体)"}`
+				);
+			}
+
+			const buf = response.arrayBuffer;
+			if (!buf || buf.byteLength === 0) {
+				throw new Error("响应体为空，未收到音频数据");
+			}
+			return buf;
+		} catch (err) {
+			logError(`[${this.id}] 合成失败`, err);
+			if (err instanceof Error && err.message.startsWith("HTTP ")) {
+				throw err;
+			}
+			throw new Error(`${this.name} 失败: ${formatError(err)}`);
 		}
-		return response.arrayBuffer;
 	}
 
 	getMaxChunkSize(): number {
