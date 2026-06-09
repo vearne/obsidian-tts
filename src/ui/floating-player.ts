@@ -1,5 +1,6 @@
 import { setIcon } from "obsidian";
 import type { PlaybackState } from "../audio/playback-manager";
+import type { QueueItem } from "../audio/queue-manager";
 
 export class FloatingPlayer {
 	private container: HTMLElement | null = null;
@@ -8,10 +9,13 @@ export class FloatingPlayer {
 	private onSeek: (time: number) => void;
 	private onJumpForward: () => void;
 	private onJumpBackward: () => void;
+	private getQueueItems: (() => QueueItem[]) | null = null;
+	private onRemoveQueueItem: ((id: string) => void) | null = null;
 	private savedPosition: { x: number; y: number } | null = null;
 	private dragging = false;
 	private dragOffset = { x: 0, y: 0 };
 	private seekDragging = false;
+	private queueExpanded = false;
 
 	constructor(
 		onPause: () => void,
@@ -27,6 +31,14 @@ export class FloatingPlayer {
 		this.onSeek = onSeek;
 		this.onJumpForward = onJumpForward;
 		this.onJumpBackward = onJumpBackward;
+	}
+
+	setQueueCallbacks(
+		getItems: () => QueueItem[],
+		onRemove: (id: string) => void
+	): void {
+		this.getQueueItems = getItems;
+		this.onRemoveQueueItem = onRemove;
 	}
 
 	show(state: PlaybackState): void {
@@ -92,6 +104,16 @@ export class FloatingPlayer {
 
 		if (pauseIcon) {
 			setIcon(pauseIcon as HTMLElement, state.isPaused ? "play" : "pause");
+		}
+	}
+
+	updateQueue(): void {
+		if (!this.container) return;
+		if (!this.getQueueItems) return;
+		const items = this.getQueueItems();
+		this.updateQueueCount(items.length);
+		if (this.queueExpanded) {
+			this.renderQueueList();
 		}
 	}
 
@@ -187,10 +209,42 @@ export class FloatingPlayer {
 		seekRow.appendChild(seekSlider);
 		seekRow.appendChild(timeDisplay);
 
+		// Queue section
+		const queueSection = document.createElement("div");
+		queueSection.className = "obsidian-tts-queue-section";
+
+		const queueToggle = document.createElement("div");
+		queueToggle.className = "obsidian-tts-queue-toggle";
+
+		const queueToggleIcon = document.createElement("span");
+		queueToggleIcon.className = "obsidian-tts-queue-toggle-icon";
+		setIcon(queueToggleIcon, "chevron-right");
+
+		const queueToggleLabel = document.createElement("span");
+		queueToggleLabel.className = "obsidian-tts-queue-toggle-label";
+
+		const queueCount = document.createElement("span");
+		queueCount.className = "obsidian-tts-queue-count";
+		queueCount.textContent = "0";
+
+		queueToggleLabel.appendChild(document.createTextNode("待播放列表 "));
+		queueToggleLabel.appendChild(queueCount);
+
+		queueToggle.appendChild(queueToggleIcon);
+		queueToggle.appendChild(queueToggleLabel);
+
+		const queueList = document.createElement("ul");
+		queueList.className = "obsidian-tts-queue-list";
+		queueList.style.display = "none";
+
+		queueSection.appendChild(queueToggle);
+		queueSection.appendChild(queueList);
+
 		el.appendChild(header);
 		el.appendChild(body);
 		el.appendChild(progress);
 		el.appendChild(seekRow);
+		el.appendChild(queueSection);
 
 		if (this.savedPosition) {
 			el.style.left = `${this.savedPosition.x}px`;
@@ -206,6 +260,19 @@ export class FloatingPlayer {
 		stopBtn.addEventListener("click", () => this.onStop());
 		forwardBtn.addEventListener("click", () => this.onJumpForward());
 		backwardBtn.addEventListener("click", () => this.onJumpBackward());
+
+		// Queue toggle
+		queueToggle.addEventListener("click", () => {
+			this.queueExpanded = !this.queueExpanded;
+			queueList.style.display = this.queueExpanded ? "block" : "none";
+			setIcon(
+				queueToggleIcon,
+				this.queueExpanded ? "chevron-down" : "chevron-right"
+			);
+			if (this.queueExpanded) {
+				this.renderQueueList();
+			}
+		});
 
 		// Seek slider events
 		seekSlider.addEventListener("mousedown", () => {
@@ -228,8 +295,64 @@ export class FloatingPlayer {
 		this.container = el;
 	}
 
+	private renderQueueList(): void {
+		if (!this.container) return;
+		const list = this.container.querySelector(
+			".obsidian-tts-queue-list"
+		) as HTMLElement;
+		if (!list) return;
+
+		list.innerHTML = "";
+
+		if (!this.getQueueItems) return;
+		const items = this.getQueueItems();
+
+		if (items.length === 0) {
+			const empty = document.createElement("li");
+			empty.className = "obsidian-tts-queue-empty";
+			empty.textContent = "队列为空";
+			list.appendChild(empty);
+			this.updateQueueCount(0);
+			return;
+		}
+
+		this.updateQueueCount(items.length);
+
+		for (const item of items) {
+			const li = document.createElement("li");
+			li.className = "obsidian-tts-queue-item";
+
+			const span = document.createElement("span");
+			span.className = "obsidian-tts-queue-item-title";
+			span.textContent = item.title;
+			li.appendChild(span);
+
+			if (this.onRemoveQueueItem) {
+				const btn = document.createElement("button");
+				btn.className = "obsidian-tts-queue-item-remove";
+				btn.setAttribute("aria-label", "移除");
+				setIcon(btn, "x");
+				const itemId = item.id;
+				btn.addEventListener("click", () => {
+					this.onRemoveQueueItem!(itemId);
+				});
+				li.appendChild(btn);
+			}
+
+			list.appendChild(li);
+		}
+	}
+
+	private updateQueueCount(count: number): void {
+		if (!this.container) return;
+		const countEl = this.container.querySelector(
+			".obsidian-tts-queue-count"
+		);
+		if (countEl) countEl.textContent = String(count);
+	}
+
 	private startDrag(e: MouseEvent, el: HTMLElement): void {
-		if ((e.target as HTMLElement).closest("span.obsidian-tts-player-close, span.obsidian-tts-player-pause, span.obsidian-tts-player-stop, span.obsidian-tts-player-forward, span.obsidian-tts-player-backward")) return;
+		if ((e.target as HTMLElement).closest("span.obsidian-tts-player-close, span.obsidian-tts-player-pause, span.obsidian-tts-player-stop, span.obsidian-tts-player-forward, span.obsidian-tts-player-backward, .obsidian-tts-queue-section")) return;
 		this.dragging = true;
 		const rect = el.getBoundingClientRect();
 		this.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
