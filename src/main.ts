@@ -63,6 +63,11 @@ export default class ObsidianTtsPlugin extends Plugin {
 			() => this.queueManager.clear()
 		);
 
+		this.floatingPlayer.setQueueCallbacks(
+			() => this.queueManager.getAll(),
+			(id) => this.queueManager.remove(id)
+		);
+
 		this.playbackManager.setStateCallback((state) => {
 			if (!this.settings.disableFloatingPlayer) {
 				this.floatingPlayer.show(state);
@@ -75,7 +80,10 @@ export default class ObsidianTtsPlugin extends Plugin {
 			void this.playNextInQueue();
 		});
 
-		this.queueManager.setOnChange(() => this.queuePanel.update());
+		this.queueManager.setOnChange(() => {
+			this.queuePanel.update();
+			this.floatingPlayer.updateQueue();
+		});
 
 		this.addSettingTab(new ObsidianTtsSettingTab(this.app, this));
 
@@ -366,9 +374,12 @@ export default class ObsidianTtsPlugin extends Plugin {
 				this.settings.aliyun.format
 			);
 
-			const buffers = await this.ttsEngine.synthesizeAll(text, (progress) => {
+			this.playbackManager.prepareStreaming(title, this.settings.playbackSpeed, format);
+
+			let playbackStarted = false;
+			await this.ttsEngine.synthesizeAll(text, (progress) => {
 				this.playbackManager.updateProgressFromEngine(progress);
-				if (!this.settings.disableFloatingPlayer) {
+				if (!this.settings.disableFloatingPlayer && !playbackStarted) {
 					this.floatingPlayer.update({
 						isPlaying: progress.status !== "stopped",
 						isPaused: false,
@@ -379,19 +390,14 @@ export default class ObsidianTtsPlugin extends Plugin {
 						duration: 0,
 					});
 				}
+			}, (buffer) => {
+				playbackStarted = true;
+				this.playbackManager.appendBuffer(buffer);
 			});
 
-			if (buffers.length === 0) {
-				throw new Error("未生成音频");
-			}
-
-			await this.playbackManager.playBuffers(
-				buffers,
-				title,
-				this.settings.playbackSpeed,
-				format
-			);
+			this.playbackManager.finishStreaming();
 		} catch (err) {
+			this.playbackManager.stop();
 			new Notice(`朗读失败: ${formatError(err)}`, 8000);
 			this.isReading = false;
 		}

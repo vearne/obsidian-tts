@@ -44,7 +44,8 @@ export class TTSEngine {
 
 	async synthesizeAll(
 		rawText: string,
-		onProgress?: ProgressCallback
+		onProgress?: ProgressCallback,
+		onChunkReady?: (buffer: ArrayBuffer) => void
 	): Promise<ArrayBuffer[]> {
 		this.aborted = false;
 		const text = this.prepareText(rawText);
@@ -90,6 +91,7 @@ export class TTSEngine {
 			try {
 				const buffer = await provider.synthesize(chunks[i], options);
 				buffers.push(buffer);
+				onChunkReady?.(buffer);
 				logInfo(`[engine] 段 ${i + 1}/${chunks.length} 完成`, {
 					bytes: buffer.byteLength,
 				});

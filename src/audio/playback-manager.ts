@@ -24,6 +24,9 @@ export class PlaybackManager {
 	private onCompleteCallback: (() => void) | null = null;
 	private stopped = false;
 	private timeupdateHandler: (() => void) | null = null;
+	private streaming = false;
+	private streamingFormat: "mp3" | "wav" = "mp3";
+	private paused = false;
 
 	setStateCallback(cb: StateCallback): void {
 		this.stateCallback = cb;
@@ -48,8 +51,40 @@ export class PlaybackManager {
 		await this.playCurrent(format);
 	}
 
+	prepareStreaming(title: string, rate: number, format: "mp3" | "wav" = "mp3"): void {
+		this.stopInternal(false);
+		this.buffers = [];
+		this.currentIndex = 0;
+		this.playbackRate = rate;
+		this.title = title;
+		this.stopped = false;
+		this.streaming = true;
+		this.streamingFormat = format;
+	}
+
+	appendBuffer(buffer: ArrayBuffer): void {
+		this.buffers.push(buffer);
+		if (!this.audio && !this.paused) {
+			void this.playCurrent(this.streamingFormat);
+		}
+	}
+
+	finishStreaming(): void {
+		this.streaming = false;
+		this.checkStreamingCompletion();
+	}
+
 	private async playCurrent(format: "mp3" | "wav"): Promise<void> {
-		if (this.stopped || this.currentIndex >= this.buffers.length) {
+		if (this.stopped) {
+			this.emitState(false, false);
+			this.onCompleteCallback?.();
+			return;
+		}
+
+		if (this.currentIndex >= this.buffers.length) {
+			if (this.streaming) {
+				return;
+			}
 			this.emitState(false, false);
 			this.onCompleteCallback?.();
 			return;
@@ -77,21 +112,33 @@ export class PlaybackManager {
 			void this.playCurrent(format);
 		};
 
-		this.emitState(true, false);
-		await this.audio.play();
-	}
-
-	pause(): void {
-		if (this.audio && !this.audio.paused) {
-			this.audio.pause();
+		if (this.paused) {
 			this.emitState(false, true);
+		} else {
+			this.emitState(true, false);
+			await this.audio.play();
 		}
 	}
 
+	pause(): void {
+		if (this.paused) return;
+		this.paused = true;
+		if (this.audio) {
+			this.audio.pause();
+		}
+		this.emitState(false, true);
+	}
+
 	resume(): void {
-		if (this.audio && this.audio.paused) {
+		if (!this.paused) return;
+		this.paused = false;
+		if (this.audio) {
 			void this.audio.play();
 			this.emitState(true, false);
+		} else if (this.streaming && this.currentIndex < this.buffers.length) {
+			void this.playCurrent(this.streamingFormat);
+		} else if (this.streaming) {
+			this.emitState(false, true);
 		}
 	}
 
@@ -101,6 +148,8 @@ export class PlaybackManager {
 
 	private stopInternal(notifyComplete: boolean): void {
 		this.stopped = true;
+		this.streaming = false;
+		this.paused = false;
 		this.cleanupAudio();
 		this.buffers = [];
 		this.currentIndex = 0;
@@ -111,8 +160,7 @@ export class PlaybackManager {
 	}
 
 	togglePause(): void {
-		if (!this.audio) return;
-		if (this.audio.paused) {
+		if (this.paused) {
 			this.resume();
 		} else {
 			this.pause();
@@ -193,12 +241,19 @@ export class PlaybackManager {
 	updateProgressFromEngine(progress: SynthesisProgress): void {
 		this.stateCallback?.({
 			isPlaying: progress.status === "playing",
-			isPaused: false,
+			isPaused: this.paused,
 			currentSegment: progress.current,
 			totalSegments: progress.total,
 			title: this.title,
 			currentTime: 0,
 			duration: 0,
 		});
+	}
+
+	private checkStreamingCompletion(): void {
+		if (!this.streaming && this.currentIndex >= this.buffers.length && !this.audio) {
+			this.emitState(false, false);
+			this.onCompleteCallback?.();
+		}
 	}
 }
