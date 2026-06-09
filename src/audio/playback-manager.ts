@@ -98,7 +98,7 @@ export class PlaybackManager {
 		this.audio.playbackRate = this.playbackRate;
 
 		this.timeupdateHandler = () => {
-			this.emitState(true, false);
+			this.emitState(!this.paused, this.paused);
 		};
 		this.audio.addEventListener("timeupdate", this.timeupdateHandler);
 
@@ -226,10 +226,10 @@ export class PlaybackManager {
 		}
 	}
 
-	private emitState(isPlaying: boolean, isPaused: boolean): void {
+	private emitState(isPlaying: boolean, _isPaused?: boolean): void {
 		this.stateCallback?.({
 			isPlaying,
-			isPaused,
+			isPaused: this.paused,
 			currentSegment: this.currentIndex + 1,
 			totalSegments: this.buffers.length,
 			title: this.title,
