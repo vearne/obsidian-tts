@@ -38,6 +38,7 @@ export default class ObsidianTtsPlugin extends Plugin {
 	queuePanel!: QueuePanel;
 	statusBarItem: HTMLElement | null = null;
 	private isReading = false;
+	private currentQueueItemId: string | null = null;
 
 	async onload() {
 		console.log(`Obsidian TTS v${this.manifest.version} loaded`);
@@ -50,7 +51,10 @@ export default class ObsidianTtsPlugin extends Plugin {
 		this.floatingPlayer = new FloatingPlayer(
 			() => this.playbackManager.togglePause(),
 			() => this.stopReading(),
-			this.settings.floatingPlayerPosition
+			this.settings.floatingPlayerPosition,
+			(time: number) => this.playbackManager.seek(time),
+			() => this.playbackManager.jumpForward(),
+			() => this.playbackManager.jumpBackward()
 		);
 
 		this.queuePanel = new QueuePanel(
@@ -97,6 +101,7 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 		this.registerCommands();
 		this.registerFileMenu();
+		this.registerEditorMenu();
 	}
 
 	onunload() {
@@ -183,6 +188,8 @@ export default class ObsidianTtsPlugin extends Plugin {
 					currentSegment: 0,
 					totalSegments: 0,
 					title: "",
+					currentTime: 0,
+					duration: 0,
 				});
 			},
 		});
@@ -192,6 +199,26 @@ export default class ObsidianTtsPlugin extends Plugin {
 				id: "show-queue-panel",
 				name: "显示播放队列",
 				callback: () => this.queuePanel.show(),
+			});
+
+			this.addCommand({
+				id: "add-selection-to-queue",
+				name: "将选中文本加入播放队列",
+				editorCheckCallback: (checking, editor) => {
+					const sel = editor.getSelection();
+					if (!sel.trim()) return false;
+					if (!checking) {
+						this.queueManager.add({
+							id: `${Date.now()}-selection`,
+							title: "选中文本",
+							text: sel,
+						});
+						if (this.settings.showNotices) {
+							new Notice("已将选中文本加入队列");
+						}
+					}
+					return true;
+				},
 			});
 		}
 
@@ -272,15 +299,57 @@ export default class ObsidianTtsPlugin extends Plugin {
 		);
 	}
 
+	private registerEditorMenu() {
+		this.registerEvent(
+			this.app.workspace.on(
+				"editor-menu",
+				(menu: Menu, editor: Editor, view: MarkdownView) => {
+					const sel = editor.getSelection();
+					if (!sel.trim()) return;
+
+					menu.addItem((item) => {
+						item.setTitle("朗读选中文本")
+							.setIcon("audio-lines")
+							.onClick(() => {
+								void this.readText(sel, "选中文本");
+							});
+					});
+
+					if (this.settings.enableQueueFeature) {
+						menu.addItem((item) => {
+							item.setTitle("将选中文本加入播放队列")
+								.setIcon("list-plus")
+								.onClick(() => {
+									this.queueManager.add({
+										id: `${Date.now()}-selection`,
+										title: "选中文本",
+										text: sel,
+									});
+									if (this.settings.showNotices) {
+										new Notice("已将选中文本加入队列");
+									}
+								});
+						});
+					}
+				}
+			)
+		);
+	}
+
 	private async readNote(editor: Editor, view: MarkdownView) {
 		const text = editor.getValue();
 		const title = getNoteTitle(view.file);
 		await this.readText(text, title);
 	}
 
-	private async readText(text: string, title: string) {
+	private async readText(text: string, title: string, isQueueItem = false) {
 		if (this.isReading) {
 			this.stopReading();
+		}
+
+		if (!isQueueItem) {
+			this.currentQueueItemId = null;
+			this.queuePanel.setHighlightId(null);
 		}
 
 		this.isReading = true;
@@ -305,6 +374,8 @@ export default class ObsidianTtsPlugin extends Plugin {
 						currentSegment: progress.current,
 						totalSegments: progress.total,
 						title,
+						currentTime: 0,
+						duration: 0,
 					});
 				}
 			});
@@ -329,6 +400,8 @@ export default class ObsidianTtsPlugin extends Plugin {
 		this.ttsEngine.stop();
 		this.playbackManager.stop();
 		this.isReading = false;
+		this.currentQueueItemId = null;
+		this.queuePanel.setHighlightId(null);
 		this.updateStatusBar(false);
 	}
 
@@ -338,7 +411,12 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 		const next = this.queueManager.shift();
 		if (next) {
-			await this.readText(next.text, next.title);
+			this.currentQueueItemId = next.id;
+			this.queuePanel.setHighlightId(next.id);
+			await this.readText(next.text, next.title, true);
+		} else {
+			this.currentQueueItemId = null;
+			this.queuePanel.setHighlightId(null);
 		}
 	}
 
