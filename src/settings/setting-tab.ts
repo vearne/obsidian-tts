@@ -8,6 +8,7 @@ import {
 	OPENAI_VOICES,
 	ZHIPU_VOICES,
 	BAIDU_VOICES,
+	ALIYUN_VOICES,
 } from "./types";
 
 export class ObsidianTtsSettingTab extends PluginSettingTab {
@@ -33,6 +34,7 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 		this.addElevenLabsSettings();
 		this.addZhipuSettings();
 		this.addBaiduSettings();
+		this.addAliyunSettings();
 		this.addTextFilteringSettings();
 		if (!Platform.isMobile) {
 			this.addMp3ExportSettings();
@@ -381,6 +383,78 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+	}
+
+	private addAliyunSettings(): void {
+		this.containerEl.createEl("h3", { text: "阿里云 CosyVoice" });
+		this.addSecretInput("API Key", this.plugin.settings.aliyun.apiKey, async (v) => {
+			this.plugin.settings.aliyun.apiKey = v;
+			await this.plugin.saveSettings();
+		});
+		new Setting(this.containerEl)
+			.setName("模型")
+			.addDropdown((d) => {
+				const models = [
+					"cosyvoice-v2",
+					"cosyvoice-v3-flash",
+					"cosyvoice-v3-plus",
+					"cosyvoice-v3.5-flash",
+					"cosyvoice-v3.5-plus",
+				];
+				for (const m of models) d.addOption(m, m);
+				d.setValue(this.plugin.settings.aliyun.model);
+				d.onChange(async (v) => {
+					this.plugin.settings.aliyun.model = v;
+					await this.plugin.saveSettings();
+				});
+			});
+		new Setting(this.containerEl)
+			.setName("音色")
+			.addDropdown((d) => {
+				for (const v of ALIYUN_VOICES) d.addOption(v.id, v.label);
+				d.setValue(this.plugin.settings.aliyun.voice);
+				d.onChange(async (v) => {
+					this.plugin.settings.aliyun.voice = v;
+					await this.plugin.saveSettings();
+				});
+			});
+		new Setting(this.containerEl)
+			.setName("输出格式")
+			.addDropdown((d) => {
+				d.addOption("mp3", "MP3（推荐）");
+				d.addOption("wav", "WAV");
+				d.addOption("pcm", "PCM");
+				d.addOption("opus", "OPUS");
+				d.setValue(this.plugin.settings.aliyun.format);
+				d.onChange(async (v) => {
+					this.plugin.settings.aliyun.format = v as ObsidianTtsSettings["aliyun"]["format"];
+					await this.plugin.saveSettings();
+				});
+			});
+		new Setting(this.containerEl)
+			.setName("采样率")
+			.addDropdown((d) => {
+				const rates = [8000, 16000, 22050, 24000, 44100, 48000];
+				for (const r of rates) d.addOption(String(r), `${r} Hz`);
+				d.setValue(String(this.plugin.settings.aliyun.sampleRate));
+				d.onChange(async (v) => {
+					this.plugin.settings.aliyun.sampleRate = parseInt(v, 10);
+					await this.plugin.saveSettings();
+				});
+			});
+		new Setting(this.containerEl)
+			.setName("音量")
+			.setDesc("范围 0–100，默认 50")
+			.addSlider((s) =>
+				s
+					.setLimits(0, 100, 1)
+					.setValue(this.plugin.settings.aliyun.volume)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.aliyun.volume = v;
+						await this.plugin.saveSettings();
+					})
+			);
 	}
 
 	private addTextFilteringSettings(): void {
