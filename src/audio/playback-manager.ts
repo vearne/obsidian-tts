@@ -7,6 +7,8 @@ export interface PlaybackState {
 	currentSegment: number;
 	totalSegments: number;
 	title: string;
+	currentTime: number;
+	duration: number;
 }
 
 type StateCallback = (state: PlaybackState) => void;
@@ -21,6 +23,7 @@ export class PlaybackManager {
 	private stateCallback: StateCallback | null = null;
 	private onCompleteCallback: (() => void) | null = null;
 	private stopped = false;
+	private timeupdateHandler: (() => void) | null = null;
 
 	setStateCallback(cb: StateCallback): void {
 		this.stateCallback = cb;
@@ -58,6 +61,11 @@ export class PlaybackManager {
 		this.blobUrl = URL.createObjectURL(blob);
 		this.audio = new Audio(this.blobUrl);
 		this.audio.playbackRate = this.playbackRate;
+
+		this.timeupdateHandler = () => {
+			this.emitState(true, false);
+		};
+		this.audio.addEventListener("timeupdate", this.timeupdateHandler);
 
 		this.audio.onended = () => {
 			this.currentIndex++;
@@ -119,8 +127,46 @@ export class PlaybackManager {
 		return [...this.buffers];
 	}
 
+	getCurrentTime(): number {
+		return this.audio?.currentTime ?? 0;
+	}
+
+	getDuration(): number {
+		return this.audio?.duration ?? 0;
+	}
+
+	seek(time: number): void {
+		if (this.audio) {
+			this.audio.currentTime = time;
+		}
+	}
+
+	jumpForward(seconds = 10): void {
+		if (this.audio) {
+			const target = Math.min(
+				this.audio.currentTime + seconds,
+				this.audio.duration
+			);
+			this.audio.currentTime = target;
+		}
+	}
+
+	jumpBackward(seconds = 10): void {
+		if (this.audio) {
+			const target = Math.max(this.audio.currentTime - seconds, 0);
+			this.audio.currentTime = target;
+		}
+	}
+
 	private cleanupAudio(): void {
 		if (this.audio) {
+			if (this.timeupdateHandler) {
+				this.audio.removeEventListener(
+					"timeupdate",
+					this.timeupdateHandler
+				);
+				this.timeupdateHandler = null;
+			}
 			this.audio.onended = null;
 			this.audio.onerror = null;
 			this.audio.pause();
@@ -139,6 +185,8 @@ export class PlaybackManager {
 			currentSegment: this.currentIndex + 1,
 			totalSegments: this.buffers.length,
 			title: this.title,
+			currentTime: this.audio?.currentTime ?? 0,
+			duration: this.audio?.duration ?? 0,
 		});
 	}
 
@@ -149,6 +197,8 @@ export class PlaybackManager {
 			currentSegment: progress.current,
 			totalSegments: progress.total,
 			title: this.title,
+			currentTime: 0,
+			duration: 0,
 		});
 	}
 }

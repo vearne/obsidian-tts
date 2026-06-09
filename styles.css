@@ -8,7 +8,7 @@
 	border-radius: 8px;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 	padding: 8px 12px;
-	min-width: 220px;
+	min-width: 280px;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -28,43 +28,101 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	max-width: 160px;
+	max-width: 200px;
 }
 
-.obsidian-tts-player-close {
-	background: none;
+.obsidian-tts-player-close,
+.obsidian-tts-player-pause,
+.obsidian-tts-player-stop,
+.obsidian-tts-player-forward,
+.obsidian-tts-player-backward {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 4px;
 	border: none;
+	background: none;
 	cursor: pointer;
-	font-size: 16px;
 	color: var(--text-muted);
-	padding: 0 4px;
+}
+
+.obsidian-tts-player-close:hover,
+.obsidian-tts-player-pause:hover,
+.obsidian-tts-player-stop:hover,
+.obsidian-tts-player-forward:hover,
+.obsidian-tts-player-backward:hover {
+	background: var(--background-modifier-hover);
 }
 
 .obsidian-tts-player-body {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	justify-content: center;
+	gap: 4px;
 }
 
 .obsidian-tts-player-progress {
 	font-size: 12px;
 	color: var(--text-muted);
+	text-align: center;
+}
+
+.obsidian-tts-player-seek-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.obsidian-tts-player-seek {
 	flex: 1;
-}
-
-.obsidian-tts-player-pause,
-.obsidian-tts-player-stop {
-	padding: 4px 10px;
-	border-radius: 4px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
+	height: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: var(--background-modifier-border);
+	border-radius: 2px;
+	outline: none;
 	cursor: pointer;
-	font-size: 12px;
 }
 
-.obsidian-tts-player-pause:hover,
-.obsidian-tts-player-stop:hover {
-	background: var(--background-modifier-hover);
+.obsidian-tts-player-seek::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	cursor: pointer;
+}
+
+.obsidian-tts-player-seek::-moz-range-thumb {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	cursor: pointer;
+	border: none;
+}
+
+.obsidian-tts-player-seek::-webkit-slider-runnable-track {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--background-modifier-border);
+}
+
+.obsidian-tts-player-seek::-moz-range-track {
+	height: 4px;
+	border-radius: 2px;
+	background: var(--background-modifier-border);
+}
+
+.obsidian-tts-player-time {
+	font-size: 11px;
+	color: var(--text-muted);
+	white-space: nowrap;
+	min-width: 72px;
+	text-align: right;
 }
 
 .obsidian-tts-queue-panel {
