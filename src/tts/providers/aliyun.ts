@@ -41,7 +41,6 @@ export class AliyunProvider implements TTSProvider {
 		});
 
 		try {
-			// Step 1: POST synthesis request → get audio URL
 			const response = await loggedRequest(
 				"aliyun",
 				{
@@ -57,8 +56,10 @@ export class AliyunProvider implements TTSProvider {
 			);
 
 			if (response.status >= 400) {
+				const errMsg =
+					response.json?.message || response.text?.slice(0, 500) || "(无响应体)";
 				throw new Error(
-					`HTTP ${response.status}: ${response.text?.slice(0, 500) || "(无响应体)"}`
+					`HTTP ${response.status}: ${errMsg}`
 				);
 			}
 

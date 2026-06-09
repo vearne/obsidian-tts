@@ -155,6 +155,9 @@ export class TTSEngine {
 			case "baidu":
 				voice = String(s.baidu.voice);
 				break;
+			case "aliyun":
+				voice = s.aliyun.voice;
+				break;
 		}
 
 		return {
