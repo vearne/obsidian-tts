@@ -6,21 +6,17 @@ import { AzureProvider } from "./providers/azure";
 import { GoogleProvider } from "./providers/google";
 import { ElevenLabsProvider } from "./providers/elevenlabs";
 import { ZhipuProvider } from "./providers/zhipu";
-import { BaiduProvider } from "./providers/baidu";
 import { AliyunProvider } from "./providers/aliyun";
 
 export class ProviderRegistry {
 	private settings: ObsidianTtsSettings;
-	private baiduProvider: BaiduProvider;
 
 	constructor(settings: ObsidianTtsSettings) {
 		this.settings = settings;
-		this.baiduProvider = new BaiduProvider(settings.baidu);
 	}
 
 	updateSettings(settings: ObsidianTtsSettings): void {
 		this.settings = settings;
-		this.baiduProvider.updateConfig(settings.baidu);
 	}
 
 	getActiveProvider(): TTSProvider {
@@ -45,6 +41,7 @@ export class ProviderRegistry {
 					baseUrl: s.openaiCompatible.baseUrl.replace(/\/$/, ""),
 					model: s.openaiCompatible.model,
 					defaultVoice: s.openaiCompatible.voice,
+					responseFormat: s.openaiCompatible.responseFormat,
 				});
 			case "azure":
 				return new AzureProvider(s.azure);
@@ -54,8 +51,6 @@ export class ProviderRegistry {
 				return new ElevenLabsProvider(s.elevenlabs);
 			case "zhipu":
 				return new ZhipuProvider(s.zhipu);
-			case "baidu":
-				return this.baiduProvider;
 			case "aliyun":
 				return new AliyunProvider(s.aliyun);
 			default:

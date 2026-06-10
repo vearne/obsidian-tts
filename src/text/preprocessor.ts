@@ -50,12 +50,3 @@ export function preprocessText(
 
 	return result;
 }
-
-export function gbkByteLength(text: string): number {
-	let len = 0;
-	for (let i = 0; i < text.length; i++) {
-		const code = text.charCodeAt(i);
-		len += code <= 0x7f ? 1 : 2;
-	}
-	return len;
-}

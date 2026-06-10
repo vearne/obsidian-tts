@@ -44,7 +44,8 @@ export class TTSEngine {
 
 	async synthesizeAll(
 		rawText: string,
-		onProgress?: ProgressCallback
+		onProgress?: ProgressCallback,
+		onChunkReady?: (buffer: ArrayBuffer) => void
 	): Promise<ArrayBuffer[]> {
 		this.aborted = false;
 		const text = this.prepareText(rawText);
@@ -53,8 +54,7 @@ export class TTSEngine {
 		}
 
 		const provider = this.registry.getActiveProvider();
-		const isBaidu = provider.id === "baidu";
-		const chunks = chunkText(text, provider.getMaxChunkSize(), isBaidu);
+		const chunks = chunkText(text, provider.getMaxChunkSize());
 
 		logInfo("[engine] 开始合成", {
 			provider: provider.id,
@@ -90,6 +90,7 @@ export class TTSEngine {
 			try {
 				const buffer = await provider.synthesize(chunks[i], options);
 				buffers.push(buffer);
+				onChunkReady?.(buffer);
 				logInfo(`[engine] 段 ${i + 1}/${chunks.length} 完成`, {
 					bytes: buffer.byteLength,
 				});
@@ -151,9 +152,6 @@ export class TTSEngine {
 				break;
 			case "zhipu":
 				voice = s.zhipu.voice;
-				break;
-			case "baidu":
-				voice = String(s.baidu.voice);
 				break;
 			case "aliyun":
 				voice = s.aliyun.voice;

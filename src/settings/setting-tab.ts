@@ -7,7 +7,6 @@ import {
 	EDGE_VOICES,
 	OPENAI_VOICES,
 	ZHIPU_VOICES,
-	BAIDU_VOICES,
 	ALIYUN_VOICES,
 } from "./types";
 
@@ -33,7 +32,6 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 		this.addGoogleSettings();
 		this.addElevenLabsSettings();
 		this.addZhipuSettings();
-		this.addBaiduSettings();
 		this.addAliyunSettings();
 		this.addTextFilteringSettings();
 		if (!Platform.isMobile) {
@@ -222,6 +220,26 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+		new Setting(this.containerEl)
+			.setName("响应格式")
+			.setDesc("标准 OpenAI 端点留空即可（默认 MP3）。智谱 GLM-TTS 等请选 WAV。")
+			.addDropdown((d) => {
+				d.addOption("", "默认（不发送）");
+				d.addOption("mp3", "MP3");
+				d.addOption("wav", "WAV（推荐）");
+				d.addOption("pcm", "PCM（将自动封装为 WAV 播放）");
+				d.addOption("opus", "Opus");
+				d.setValue(this.plugin.settings.openaiCompatible.responseFormat ?? "");
+				d.onChange(async (v) => {
+					this.plugin.settings.openaiCompatible.responseFormat = v as
+						| ""
+						| "mp3"
+						| "wav"
+						| "pcm"
+						| "opus";
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 
 	private addAzureSettings(): void {
@@ -352,34 +370,6 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 				d.setValue(fmt === "pcm" ? "pcm" : "wav");
 				d.onChange(async (v) => {
 					this.plugin.settings.zhipu.responseFormat = v as "wav" | "pcm";
-					await this.plugin.saveSettings();
-				});
-			});
-	}
-
-	private addBaiduSettings(): void {
-		this.containerEl.createEl("h3", { text: "百度智能云 TTS" });
-		this.addSecretInput("API Key", this.plugin.settings.baidu.apiKey, async (v) => {
-			this.plugin.settings.baidu.apiKey = v;
-			await this.plugin.saveSettings();
-		});
-		this.addSecretInput(
-			"Secret Key",
-			this.plugin.settings.baidu.secretKey,
-			async (v) => {
-				this.plugin.settings.baidu.secretKey = v;
-				await this.plugin.saveSettings();
-			}
-		);
-		new Setting(this.containerEl)
-			.setName("发音人")
-			.addDropdown((d) => {
-				for (const v of BAIDU_VOICES) {
-					d.addOption(String(v.id), v.label);
-				}
-				d.setValue(String(this.plugin.settings.baidu.voice));
-				d.onChange(async (v) => {
-					this.plugin.settings.baidu.voice = parseInt(v, 10);
 					await this.plugin.saveSettings();
 				});
 			});

@@ -1,5 +1,7 @@
 # Obsidian TTS
 
+[English](README.en.md)
+
 多 Provider 语音朗读 Obsidian 插件，支持朗读笔记或选中文本。
 
 ## 支持的 Provider
@@ -13,7 +15,6 @@
 | Google Cloud TTS | 谷歌云语音合成 |
 | ElevenLabs | 高质量 AI 语音 |
 | 智谱 GLM-TTS | 国内，情感表达好 |
-| 百度智能云 TTS | 国内，多种发音人 |
 | 阿里云 CosyVoice | 国内，45+ 音色，支持方言/SSML/指令控制 |
 
 ## 功能

@@ -6,7 +6,6 @@ export type ProviderId =
 	| "google"
 	| "elevenlabs"
 	| "zhipu"
-	| "baidu"
 	| "aliyun";
 
 export type EdgeConnectionMode = "auto" | "direct" | "proxy";
@@ -52,6 +51,8 @@ export interface ObsidianTtsSettings {
 		baseUrl: string;
 		model: string;
 		voice: string;
+		/** 空字符串：不发送该字段；智谱等兼容端点建议选 wav */
+		responseFormat: "" | "mp3" | "wav" | "pcm" | "opus";
 	};
 
 	azure: {
@@ -78,15 +79,6 @@ export interface ObsidianTtsSettings {
 		speed: number;
 		volume: number;
 		responseFormat: "wav" | "pcm";
-	};
-
-	baidu: {
-		apiKey: string;
-		secretKey: string;
-		voice: number;
-		speed: number;
-		pitch: number;
-		volume: number;
 	};
 
 	aliyun: {
@@ -144,6 +136,7 @@ export const DEFAULT_SETTINGS: ObsidianTtsSettings = {
 		baseUrl: "http://localhost:5050/v1",
 		model: "tts-1",
 		voice: "zh-CN-XiaoxiaoNeural",
+		responseFormat: "",
 	},
 
 	azure: {
@@ -172,15 +165,6 @@ export const DEFAULT_SETTINGS: ObsidianTtsSettings = {
 		responseFormat: "wav",
 	},
 
-	baidu: {
-		apiKey: "",
-		secretKey: "",
-		voice: 0,
-		speed: 5,
-		pitch: 5,
-		volume: 5,
-	},
-
 	aliyun: {
 		apiKey: "",
 		model: "cosyvoice-v3-flash",
@@ -205,7 +189,6 @@ export const PROVIDER_LABELS: Record<ProviderId, string> = {
 	google: "Google Cloud TTS",
 	elevenlabs: "ElevenLabs",
 	zhipu: "智谱 GLM-TTS",
-	baidu: "百度智能云 TTS",
 	aliyun: "阿里云 CosyVoice",
 };
 
@@ -231,15 +214,6 @@ export const ZHIPU_VOICES: { id: string; label: string }[] = [
 ];
 
 export const ZHIPU_MAX_INPUT_CHARS = 1024;
-
-export const BAIDU_VOICES: { id: number; label: string }[] = [
-	{ id: 0, label: "度小美" },
-	{ id: 1, label: "度小宇" },
-	{ id: 3, label: "度逍遥" },
-	{ id: 4, label: "度丫丫" },
-	{ id: 5003, label: "度逍遥(精品)" },
-	{ id: 5118, label: "度小鹿" },
-];
 
 export const ALIYUN_VOICES: { id: string; label: string }[] = [
 	{ id: "longanyang", label: "龙安洋（阳光大男孩）" },

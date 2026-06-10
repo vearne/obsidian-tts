@@ -8,7 +8,7 @@ import {
 	TAbstractFile,
 	TFile,
 } from "obsidian";
-import { PlaybackManager } from "./audio/playback-manager";
+import { buildPlaybackState, PlaybackManager } from "./audio/playback-manager";
 import { QueueManager } from "./audio/queue-manager";
 import {
 	DEFAULT_SETTINGS,
@@ -63,6 +63,11 @@ export default class ObsidianTtsPlugin extends Plugin {
 			() => this.queueManager.clear()
 		);
 
+		this.floatingPlayer.setQueueCallbacks(
+			() => this.queueManager.getAll(),
+			(id) => this.queueManager.remove(id)
+		);
+
 		this.playbackManager.setStateCallback((state) => {
 			if (!this.settings.disableFloatingPlayer) {
 				this.floatingPlayer.show(state);
@@ -75,7 +80,10 @@ export default class ObsidianTtsPlugin extends Plugin {
 			void this.playNextInQueue();
 		});
 
-		this.queueManager.setOnChange(() => this.queuePanel.update());
+		this.queueManager.setOnChange(() => {
+			this.queuePanel.update();
+			this.floatingPlayer.updateQueue();
+		});
 
 		this.addSettingTab(new ObsidianTtsSettingTab(this.app, this));
 
@@ -117,6 +125,10 @@ export default class ObsidianTtsPlugin extends Plugin {
 	}
 
 	private migrateSettings(): void {
+		if ((this.settings.activeProvider as string) === "baidu") {
+			this.settings.activeProvider = "edge";
+		}
+
 		const fmt = this.settings.zhipu.responseFormat as string;
 		if (fmt === "mp3" || !(fmt === "wav" || fmt === "pcm")) {
 			this.settings.zhipu.responseFormat = "wav";
@@ -138,6 +150,19 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 		this.settings.zhipu.speed = Math.max(0.5, Math.min(2, this.settings.zhipu.speed));
 		this.settings.zhipu.volume = Math.max(0.1, Math.min(10, this.settings.zhipu.volume));
+
+		if (
+			this.settings.openaiCompatible.responseFormat === undefined ||
+			this.settings.openaiCompatible.responseFormat === null
+		) {
+			this.settings.openaiCompatible.responseFormat = "";
+		}
+		if (
+			!this.settings.openaiCompatible.responseFormat &&
+			this.settings.openaiCompatible.baseUrl.includes("bigmodel.cn")
+		) {
+			this.settings.openaiCompatible.responseFormat = "wav";
+		}
 	}
 
 	async saveSettings() {
@@ -182,15 +207,17 @@ export default class ObsidianTtsPlugin extends Plugin {
 			id: "show-floating-player",
 			name: "显示浮动播放器",
 			callback: () => {
-				this.floatingPlayer.show({
-					isPlaying: this.isReading,
-					isPaused: false,
-					currentSegment: 0,
-					totalSegments: 0,
-					title: "",
-					currentTime: 0,
-					duration: 0,
-				});
+				this.floatingPlayer.show(
+					buildPlaybackState({
+						isPlaying: this.isReading,
+						isPaused: this.playbackManager.isPaused(),
+						currentSegment: 0,
+						totalSegments: 0,
+						title: "",
+						currentTime: 0,
+						duration: 0,
+					})
+				);
 			},
 		});
 
@@ -363,35 +390,36 @@ export default class ObsidianTtsPlugin extends Plugin {
 			const format = getAudioFormat(
 				this.settings.activeProvider,
 				this.settings.zhipu.responseFormat,
-				this.settings.aliyun.format
+				this.settings.aliyun.format,
+				this.settings.openaiCompatible.responseFormat
 			);
 
-			const buffers = await this.ttsEngine.synthesizeAll(text, (progress) => {
+			this.playbackManager.prepareStreaming(title, this.settings.playbackSpeed, format);
+
+			let playbackStarted = false;
+			await this.ttsEngine.synthesizeAll(text, (progress) => {
 				this.playbackManager.updateProgressFromEngine(progress);
-				if (!this.settings.disableFloatingPlayer) {
-					this.floatingPlayer.update({
-						isPlaying: progress.status !== "stopped",
-						isPaused: false,
-						currentSegment: progress.current,
-						totalSegments: progress.total,
-						title,
-						currentTime: 0,
-						duration: 0,
-					});
+				if (!this.settings.disableFloatingPlayer && !playbackStarted) {
+					this.floatingPlayer.update(
+						buildPlaybackState({
+							isPlaying: progress.status !== "stopped",
+							isPaused: this.playbackManager.isPaused(),
+							currentSegment: progress.current,
+							totalSegments: progress.total,
+							title,
+							currentTime: 0,
+							duration: 0,
+						})
+					);
 				}
+			}, (buffer) => {
+				playbackStarted = true;
+				this.playbackManager.appendBuffer(buffer);
 			});
 
-			if (buffers.length === 0) {
-				throw new Error("未生成音频");
-			}
-
-			await this.playbackManager.playBuffers(
-				buffers,
-				title,
-				this.settings.playbackSpeed,
-				format
-			);
+			this.playbackManager.finishStreaming();
 		} catch (err) {
+			this.playbackManager.stop();
 			new Notice(`朗读失败: ${formatError(err)}`, 8000);
 			this.isReading = false;
 		}
