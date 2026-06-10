@@ -1,9 +1,9 @@
 {
 	"id": "obsidian-tts",
 	"name": "Obsidian TTS",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"minAppVersion": "1.5.0",
-	"description": "Read notes aloud with multiple TTS providers: Edge TTS, OpenAI, Azure, Google, ElevenLabs, Zhipu GLM-TTS, Baidu Cloud TTS.",
+	"description": "Read notes aloud with multiple TTS providers: Edge TTS, OpenAI, Azure, Google, ElevenLabs, Zhipu GLM-TTS, Aliyun CosyVoice.",
 	"author": "vearne",
 	"authorUrl": "https://github.com/vearne",
 	"isDesktopOnly": false

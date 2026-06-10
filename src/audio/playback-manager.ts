@@ -1,3 +1,4 @@
+import { detectAudioFormat } from "./wav";
 import { getMimeType } from "../tts/provider";
 import type { SynthesisProgress } from "../tts/engine";
 
@@ -81,6 +82,12 @@ export class PlaybackManager {
 	}
 
 	appendBuffer(buffer: ArrayBuffer): void {
+		if (this.streaming && this.buffers.length === 0) {
+			const detected = detectAudioFormat(buffer);
+			if (detected !== this.streamingFormat) {
+				this.streamingFormat = detected;
+			}
+		}
 		this.buffers.push(buffer);
 		if (!this.audio && !this.paused) {
 			void this.playCurrent(this.streamingFormat);

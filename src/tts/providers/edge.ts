@@ -175,7 +175,7 @@ export class EdgeProvider implements TTSProvider {
 					"解决方案：\n" +
 					"1. 设置 → Obsidian TTS → Edge TTS → 连接模式选「仅代理」\n" +
 					"2. 部署 openai-edge-tts 并填写代理 URL（如 http://localhost:5050/v1）\n" +
-					"3. 或切换到智谱/百度/OpenAI 等其它 Provider"
+					"3. 或切换到智谱/阿里云/OpenAI 等其它 Provider"
 			);
 		});
 	}

@@ -54,8 +54,7 @@ export class TTSEngine {
 		}
 
 		const provider = this.registry.getActiveProvider();
-		const isBaidu = provider.id === "baidu";
-		const chunks = chunkText(text, provider.getMaxChunkSize(), isBaidu);
+		const chunks = chunkText(text, provider.getMaxChunkSize());
 
 		logInfo("[engine] 开始合成", {
 			provider: provider.id,
@@ -153,9 +152,6 @@ export class TTSEngine {
 				break;
 			case "zhipu":
 				voice = s.zhipu.voice;
-				break;
-			case "baidu":
-				voice = String(s.baidu.voice);
 				break;
 			case "aliyun":
 				voice = s.aliyun.voice;

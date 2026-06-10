@@ -125,6 +125,10 @@ export default class ObsidianTtsPlugin extends Plugin {
 	}
 
 	private migrateSettings(): void {
+		if ((this.settings.activeProvider as string) === "baidu") {
+			this.settings.activeProvider = "edge";
+		}
+
 		const fmt = this.settings.zhipu.responseFormat as string;
 		if (fmt === "mp3" || !(fmt === "wav" || fmt === "pcm")) {
 			this.settings.zhipu.responseFormat = "wav";
@@ -146,6 +150,19 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 		this.settings.zhipu.speed = Math.max(0.5, Math.min(2, this.settings.zhipu.speed));
 		this.settings.zhipu.volume = Math.max(0.1, Math.min(10, this.settings.zhipu.volume));
+
+		if (
+			this.settings.openaiCompatible.responseFormat === undefined ||
+			this.settings.openaiCompatible.responseFormat === null
+		) {
+			this.settings.openaiCompatible.responseFormat = "";
+		}
+		if (
+			!this.settings.openaiCompatible.responseFormat &&
+			this.settings.openaiCompatible.baseUrl.includes("bigmodel.cn")
+		) {
+			this.settings.openaiCompatible.responseFormat = "wav";
+		}
 	}
 
 	async saveSettings() {
@@ -373,7 +390,8 @@ export default class ObsidianTtsPlugin extends Plugin {
 			const format = getAudioFormat(
 				this.settings.activeProvider,
 				this.settings.zhipu.responseFormat,
-				this.settings.aliyun.format
+				this.settings.aliyun.format,
+				this.settings.openaiCompatible.responseFormat
 			);
 
 			this.playbackManager.prepareStreaming(title, this.settings.playbackSpeed, format);

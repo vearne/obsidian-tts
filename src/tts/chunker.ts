@@ -1,9 +1,7 @@
-import { gbkByteLength } from "../text/preprocessor";
-
 const SENTENCE_END = /[。！？.!?；;]\s*/;
 const PARAGRAPH_END = /\n\n+/;
 
-export function chunkText(text: string, maxSize: number, isBaidu = false): string[] {
+export function chunkText(text: string, maxSize: number): string[] {
 	if (!text.trim()) return [];
 
 	if (text.length <= maxSize) return [text];
@@ -12,13 +10,6 @@ export function chunkText(text: string, maxSize: number, isBaidu = false): strin
 	let remaining = text;
 
 	while (remaining.length > 0) {
-		if (isBaidu) {
-			const chunk = takeBaiduChunk(remaining, maxSize);
-			chunks.push(chunk);
-			remaining = remaining.slice(chunk.length).trimStart();
-			continue;
-		}
-
 		if (remaining.length <= maxSize) {
 			chunks.push(remaining.trim());
 			break;
@@ -33,19 +24,6 @@ export function chunkText(text: string, maxSize: number, isBaidu = false): strin
 	}
 
 	return chunks.filter((c) => c.length > 0);
-}
-
-function takeBaiduChunk(text: string, maxGbkBytes: number): string {
-	let result = "";
-	for (const char of text) {
-		const candidate = result + char;
-		if (gbkByteLength(candidate) > maxGbkBytes) break;
-		result = candidate;
-	}
-	if (!result && text.length > 0) {
-		return text.charAt(0);
-	}
-	return result;
 }
 
 function findSplitPoint(text: string, maxSize: number): number {
