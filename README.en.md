@@ -26,18 +26,58 @@ An Obsidian plugin that reads notes aloud with multiple TTS providers. Supports 
 - MP3 export and embed in notes (desktop only)
 - Markdown text preprocessing
 
+## Local Installation
+
+Install from source (when the plugin is not in Community Plugins, you need the latest commit, or you have local changes):
+
+**Prerequisites:** [Node.js](https://nodejs.org/) (18+ recommended), npm, and Git.
+
+1. **Clone and build**
+
+```bash
+git clone https://github.com/vearne/obsidian-tts.git
+cd obsidian-tts
+npm install
+npm run build
+```
+
+This generates `main.js` in the project root (gitignored; you must build locally).
+
+2. **Install into your vault**
+
+The plugin folder is `<your-vault>/.obsidian/plugins/obsidian-tts/`. Choose one approach:
+
+**Option A: Copy (recommended for regular use)**
+
+```bash
+mkdir -p /path/to/vault/.obsidian/plugins/obsidian-tts
+cp main.js manifest.json styles.css /path/to/vault/.obsidian/plugins/obsidian-tts/
+```
+
+**Option B: Symlink (for development; rebuild to pick up changes)**
+
+```bash
+ln -s "$(pwd)" /path/to/vault/.obsidian/plugins/obsidian-tts
+```
+
+Replace `/path/to/vault` with your Obsidian vault path.
+
+3. **Enable in Obsidian**
+
+Go to **Settings → Community plugins**, turn off Restricted mode, find **Obsidian TTS** in the installed list, and enable it.
+
+> To update: run `git pull && npm install && npm run build` in the repo; if you used copy, run `cp` again to overwrite the three files.
+
 ## Development
+
+For development, use watch mode so the bundle rebuilds on save:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Symlink the project into your Obsidian plugins folder:
-
-```bash
-ln -s $(pwd) /path/to/vault/.obsidian/plugins/obsidian-tts
-```
+Use **Option B** (symlink) above so rebuilt artifacts are picked up automatically.
 
 ## Edge TTS Notes
 
