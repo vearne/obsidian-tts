@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-tts",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Multi-provider text-to-speech plugin for Obsidian",
 	"main": "main.js",
 	"scripts": {

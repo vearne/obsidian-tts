@@ -8,7 +8,7 @@ import {
 	TAbstractFile,
 	TFile,
 } from "obsidian";
-import { buildPlaybackState, PlaybackManager } from "./audio/playback-manager";
+import { buildPlaybackState, PlaybackManager, PlaybackState } from "./audio/playback-manager";
 import { QueueManager } from "./audio/queue-manager";
 import {
 	DEFAULT_SETTINGS,
@@ -73,7 +73,7 @@ export default class ObsidianTtsPlugin extends Plugin {
 				this.floatingPlayer.show(state);
 				this.floatingPlayer.update(state);
 			}
-			this.updateStatusBar(state.isPlaying && !state.isPaused);
+			this.updateStatusBar(state);
 		});
 
 		this.playbackManager.setOnComplete(() => {
@@ -150,6 +150,27 @@ export default class ObsidianTtsPlugin extends Plugin {
 
 		this.settings.zhipu.speed = Math.max(0.5, Math.min(2, this.settings.zhipu.speed));
 		this.settings.zhipu.volume = Math.max(0.1, Math.min(10, this.settings.zhipu.volume));
+
+		if (this.settings.synthesisConcurrency === undefined) {
+			this.settings.synthesisConcurrency = 2;
+		}
+		if (this.settings.exportConcurrency === undefined) {
+			this.settings.exportConcurrency = 3;
+		}
+		if (this.settings.enableAudioCache === undefined) {
+			this.settings.enableAudioCache = true;
+		}
+		if (this.settings.fastStart === undefined) {
+			this.settings.fastStart = true;
+		}
+		this.settings.synthesisConcurrency = Math.max(
+			1,
+			Math.min(4, this.settings.synthesisConcurrency)
+		);
+		this.settings.exportConcurrency = Math.max(
+			1,
+			Math.min(6, this.settings.exportConcurrency)
+		);
 
 		if (
 			this.settings.openaiCompatible.responseFormat === undefined ||
@@ -394,28 +415,44 @@ export default class ObsidianTtsPlugin extends Plugin {
 				this.settings.openaiCompatible.responseFormat
 			);
 
-			this.playbackManager.prepareStreaming(title, this.settings.playbackSpeed, format);
+			const canMse =
+				this.settings.fastStart &&
+				format === "mp3" &&
+				this.ttsEngine.canUseEdgeStreaming();
 
-			let playbackStarted = false;
-			await this.ttsEngine.synthesizeAll(text, (progress) => {
-				this.playbackManager.updateProgressFromEngine(progress);
-				if (!this.settings.disableFloatingPlayer && !playbackStarted) {
-					this.floatingPlayer.update(
-						buildPlaybackState({
-							isPlaying: progress.status !== "stopped",
-							isPaused: this.playbackManager.isPaused(),
-							currentSegment: progress.current,
-							totalSegments: progress.total,
-							title,
-							currentTime: 0,
-							duration: 0,
-						})
-					);
+			let mseActive = false;
+			if (canMse) {
+				mseActive = await this.playbackManager.prepareMseStreaming(
+					title,
+					this.settings.playbackSpeed,
+					format
+				);
+			}
+			if (!mseActive) {
+				this.playbackManager.prepareStreaming(
+					title,
+					this.settings.playbackSpeed,
+					format
+				);
+			}
+
+			await this.ttsEngine.synthesizeAll(
+				text,
+				(progress) => {
+					this.playbackManager.updateProgressFromEngine(progress);
+				},
+				(buffer, _index) => {
+					this.playbackManager.appendBuffer(buffer);
+				},
+				{
+					concurrency: mseActive ? 1 : this.settings.synthesisConcurrency,
+					fastStart: this.settings.fastStart,
+					useCache: this.settings.enableAudioCache,
+					onStreamChunk: mseActive
+						? (chunk) => this.playbackManager.appendStreamChunk(chunk)
+						: undefined,
 				}
-			}, (buffer) => {
-				playbackStarted = true;
-				this.playbackManager.appendBuffer(buffer);
-			});
+			);
 
 			this.playbackManager.finishStreaming();
 		} catch (err) {
@@ -431,7 +468,7 @@ export default class ObsidianTtsPlugin extends Plugin {
 		this.isReading = false;
 		this.currentQueueItemId = null;
 		this.queuePanel.setHighlightId(null);
-		this.updateStatusBar(false);
+		this.updateStatusBar(null);
 	}
 
 	private async playNextInQueue() {
@@ -474,7 +511,31 @@ export default class ObsidianTtsPlugin extends Plugin {
 				new Notice("正在生成 MP3...", 2000);
 			}
 
-			const buffers = await this.ttsEngine.synthesizeAll(text);
+			const buffers = await this.ttsEngine.synthesizeAll(
+				text,
+				(progress) => {
+					this.updateStatusBar(
+						buildPlaybackState({
+							isPlaying: false,
+							isPaused: false,
+							currentSegment: progress.current,
+							totalSegments: progress.total,
+							title: "导出 MP3",
+							currentTime: 0,
+							duration: 0,
+							synthesisPercent: progress.percent,
+							isSynthesizing: progress.status === "synthesizing",
+							synthesisMessage: progress.message,
+						})
+					);
+				},
+				undefined,
+				{
+					concurrency: this.settings.exportConcurrency,
+					fastStart: false,
+					useCache: this.settings.enableAudioCache,
+				}
+			);
 			const fileName = sanitizeFileName(title);
 			const path = await exportMp3ToVault(
 				this.app,
@@ -490,13 +551,30 @@ export default class ObsidianTtsPlugin extends Plugin {
 			if (this.settings.showNotices) {
 				new Notice(`MP3 已导出: ${path}`, 5000);
 			}
+			this.updateStatusBar(null);
 		} catch (err) {
 			new Notice(`MP3 导出失败: ${formatError(err)}`, 8000);
+			this.updateStatusBar(null);
 		}
 	}
 
-	private updateStatusBar(active: boolean) {
+	private updateStatusBar(state: PlaybackState | null) {
 		if (!this.statusBarItem) return;
-		this.statusBarItem.toggleClass("obsidian-tts-active", active);
+		if (!state) {
+			this.statusBarItem.setText("🔊 TTS");
+			this.statusBarItem.toggleClass("obsidian-tts-active", false);
+			return;
+		}
+
+		if (state.isSynthesizing) {
+			this.statusBarItem.setText(`🔊 ${state.synthesisPercent}%`);
+			this.statusBarItem.toggleClass("obsidian-tts-active", true);
+		} else if (state.isPlaying && !state.isPaused) {
+			this.statusBarItem.setText("🔊 TTS");
+			this.statusBarItem.toggleClass("obsidian-tts-active", true);
+		} else {
+			this.statusBarItem.setText("🔊 TTS");
+			this.statusBarItem.toggleClass("obsidian-tts-active", state.isPaused);
+		}
 	}
 }

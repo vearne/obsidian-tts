@@ -60,8 +60,14 @@ export class FloatingPlayer {
 	update(state: PlaybackState): void {
 		if (!this.container) return;
 		const titleEl = this.container.querySelector(".obsidian-tts-player-title");
-		const progressEl = this.container.querySelector(
-			".obsidian-tts-player-progress"
+		const synthRow = this.container.querySelector(
+			".obsidian-tts-player-synth-row"
+		) as HTMLElement | null;
+		const synthFill = this.container.querySelector(
+			".obsidian-tts-player-synth-fill"
+		) as HTMLElement | null;
+		const synthLabel = this.container.querySelector(
+			".obsidian-tts-player-synth-label"
 		);
 		const pauseIcon = this.container.querySelector(
 			".obsidian-tts-player-pause-icon"
@@ -78,11 +84,13 @@ export class FloatingPlayer {
 
 		if (titleEl) titleEl.textContent = state.title || "朗读中";
 
+		const showSynthProgress =
+			state.isSynthesizing ||
+			(state.duration <= 0 && state.synthesisPercent < 100);
+
 		if (state.duration > 0 && seekRow) {
 			seekRow.setAttribute("style", "display: flex;");
-			if (progressEl) {
-				(progressEl as HTMLElement).style.display = "none";
-			}
+			if (synthRow) synthRow.style.display = "none";
 
 			if (seekSlider && !this.seekDragging) {
 				seekSlider.max = String(Math.floor(state.duration));
@@ -91,15 +99,27 @@ export class FloatingPlayer {
 			if (timeDisplay) {
 				timeDisplay.textContent = `${formatTime(state.currentTime)} / ${formatTime(state.duration)}`;
 			}
+		} else if (showSynthProgress && synthRow) {
+			if (seekRow) seekRow.setAttribute("style", "display: none;");
+			synthRow.style.display = "flex";
+
+			const percent = Math.max(0, Math.min(100, state.synthesisPercent));
+			if (synthFill) {
+				synthFill.style.width = `${percent}%`;
+			}
+			if (synthLabel) {
+				const segmentPart =
+					state.totalSegments > 0
+						? ` · ${state.currentSegment}/${state.totalSegments} 段`
+						: "";
+				const messagePart = state.synthesisMessage
+					? ` · ${state.synthesisMessage}`
+					: "";
+				synthLabel.textContent = `合成中 ${percent}%${segmentPart}${messagePart}`;
+			}
 		} else {
 			if (seekRow) seekRow.setAttribute("style", "display: none;");
-			if (progressEl) {
-				(progressEl as HTMLElement).style.display = "";
-				progressEl.textContent =
-					state.totalSegments > 0
-						? `${state.currentSegment} / ${state.totalSegments}`
-						: "";
-			}
+			if (synthRow) synthRow.style.display = "none";
 		}
 
 		const pauseBtn = this.container.querySelector(".obsidian-tts-player-pause");
@@ -217,9 +237,24 @@ export class FloatingPlayer {
 		body.appendChild(stopBtn);
 		body.appendChild(forwardBtn);
 
-		// Progress row (segment progress - shown during synthesis)
-		const progress = document.createElement("span");
-		progress.className = "obsidian-tts-player-progress";
+		// Synthesis progress row (shown during TTS processing)
+		const synthRow = document.createElement("div");
+		synthRow.className = "obsidian-tts-player-synth-row";
+		synthRow.style.display = "none";
+
+		const synthBar = document.createElement("div");
+		synthBar.className = "obsidian-tts-player-synth-bar";
+
+		const synthFill = document.createElement("div");
+		synthFill.className = "obsidian-tts-player-synth-fill";
+		synthBar.appendChild(synthFill);
+
+		const synthLabel = document.createElement("span");
+		synthLabel.className = "obsidian-tts-player-synth-label";
+		synthLabel.textContent = "合成中 0%";
+
+		synthRow.appendChild(synthBar);
+		synthRow.appendChild(synthLabel);
 
 		// Seek row (time slider - shown during playback)
 		const seekRow = document.createElement("div");
@@ -273,7 +308,7 @@ export class FloatingPlayer {
 
 		el.appendChild(header);
 		el.appendChild(body);
-		el.appendChild(progress);
+		el.appendChild(synthRow);
 		el.appendChild(seekRow);
 		el.appendChild(queueSection);
 

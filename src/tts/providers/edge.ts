@@ -13,7 +13,8 @@ import { Communicate } from "edge-tts-universal";
 async function synthesizeDirect(
 	text: string,
 	voice: string,
-	rate: number
+	rate: number,
+	onStreamChunk?: (chunk: Uint8Array) => void
 ): Promise<ArrayBuffer> {
 	if (Platform.isMobile) {
 		throw new Error("移动端不支持 Edge TTS 直连，请配置代理 URL");
@@ -39,13 +40,18 @@ async function synthesizeDirect(
 				const data = chunk.data as Uint8Array | ArrayBuffer | Buffer;
 				if (data instanceof Uint8Array) {
 					chunks.push(data);
+					onStreamChunk?.(data);
 				} else if (data instanceof ArrayBuffer) {
-					chunks.push(new Uint8Array(data));
+					const arr = new Uint8Array(data);
+					chunks.push(arr);
+					onStreamChunk?.(arr);
 				} else if (
 					typeof Buffer !== "undefined" &&
 					Buffer.isBuffer(data)
 				) {
-					chunks.push(new Uint8Array(data));
+					const arr = new Uint8Array(data);
+					chunks.push(arr);
+					onStreamChunk?.(arr);
 				}
 			}
 		}
@@ -153,7 +159,12 @@ export class EdgeProvider implements TTSProvider {
 		}
 
 		if (mode === "direct") {
-			return synthesizeDirect(text, voice, options.rate);
+			return synthesizeDirect(
+				text,
+				voice,
+				options.rate,
+				options.onStreamChunk
+			);
 		}
 
 		return synthesizeDirect(text, voice, options.rate).catch(async (directErr) => {

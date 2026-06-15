@@ -31,6 +31,14 @@ export interface ObsidianTtsSettings {
 	enableQueueFeature: boolean;
 	disableFloatingPlayer: boolean;
 	floatingPlayerPosition: { x: number; y: number } | null;
+	/** 朗读时并行预合成段数（2 推荐） */
+	synthesisConcurrency: number;
+	/** MP3 导出时并行合成并发数 */
+	exportConcurrency: number;
+	/** 缓存已合成音频，重复朗读更快 */
+	enableAudioCache: boolean;
+	/** 长文本首段使用较小分块以更快开始播放 */
+	fastStart: boolean;
 
 	textFiltering: TextFilteringSettings;
 
@@ -107,6 +115,10 @@ export const DEFAULT_SETTINGS: ObsidianTtsSettings = {
 	enableQueueFeature: true,
 	disableFloatingPlayer: false,
 	floatingPlayerPosition: null,
+	synthesisConcurrency: 2,
+	exportConcurrency: 3,
+	enableAudioCache: true,
+	fastStart: true,
 
 	textFiltering: {
 		filterFrontmatter: true,

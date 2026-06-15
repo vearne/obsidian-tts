@@ -1,5 +1,6 @@
 const SENTENCE_END = /[。！？.!?；;]\s*/;
 const PARAGRAPH_END = /\n\n+/;
+const FAST_START_CHUNK_SIZE = 600;
 
 export function chunkText(text: string, maxSize: number): string[] {
 	if (!text.trim()) return [];
@@ -24,6 +25,36 @@ export function chunkText(text: string, maxSize: number): string[] {
 	}
 
 	return chunks.filter((c) => c.length > 0);
+}
+
+/** 首段使用较小块以更快开始播放，其余按 maxSize 分块 */
+export function chunkTextWithFastStart(
+	text: string,
+	maxSize: number,
+	fastStart: boolean
+): string[] {
+	if (!fastStart || text.length <= maxSize) {
+		return chunkText(text, maxSize);
+	}
+
+	const fastSize = Math.min(FAST_START_CHUNK_SIZE, maxSize);
+	const firstChunks = chunkText(text, fastSize);
+	if (firstChunks.length === 0) {
+		return chunkText(text, maxSize);
+	}
+
+	const first = firstChunks[0];
+	const idx = text.indexOf(first);
+	const afterFirst =
+		idx >= 0
+			? text.slice(idx + first.length).trimStart()
+			: text.slice(first.length).trimStart();
+
+	if (!afterFirst) {
+		return [first];
+	}
+
+	return [first, ...chunkText(afterFirst, maxSize)];
 }
 
 function findSplitPoint(text: string, maxSize: number): number {

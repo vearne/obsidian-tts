@@ -4,12 +4,15 @@ export interface VoiceInfo {
 	locale?: string;
 }
 
+export type StreamChunkCallback = (chunk: Uint8Array) => void;
+
 export interface SynthesisOptions {
 	voice: string;
 	rate: number;
 	pitch?: number;
 	volume?: number;
 	format?: "mp3" | "wav" | "opus";
+	onStreamChunk?: StreamChunkCallback;
 }
 
 export interface TTSProvider {

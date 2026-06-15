@@ -90,6 +90,55 @@ export class ObsidianTtsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(this.containerEl)
+			.setName("快速开始播放")
+			.setDesc("长文本首段使用较小分块；Edge 直连时启用段内流式播放以降低首段延迟")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.fastStart).onChange(async (v) => {
+					this.plugin.settings.fastStart = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(this.containerEl)
+			.setName("音频缓存")
+			.setDesc("缓存已合成的音频段，重复朗读同一内容时跳过 API 请求")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.enableAudioCache).onChange(async (v) => {
+					this.plugin.settings.enableAudioCache = v;
+					await this.plugin.saveSettings();
+					this.plugin.ttsEngine.updateSettings(this.plugin.settings);
+				})
+			);
+
+		new Setting(this.containerEl)
+			.setName("朗读预合成并发")
+			.setDesc("同时预合成的段数（2 推荐）。Edge 段内流式时自动降为 1")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 4, 1)
+					.setValue(this.plugin.settings.synthesisConcurrency)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.synthesisConcurrency = v;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(this.containerEl)
+			.setName("导出合成并发")
+			.setDesc("生成 MP3 时并行合成的段数（3 推荐，过高可能触发 API 限流）")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 6, 1)
+					.setValue(this.plugin.settings.exportConcurrency)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.exportConcurrency = v;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(this.containerEl)
 			.setName("显示状态栏按钮")
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.showStatusBarButton).onChange(async (v) => {
