@@ -177,6 +177,9 @@ export class PlaybackManager {
 	appendBuffer(buffer: ArrayBuffer): void {
 		if (this.mseMode) {
 			this.buffers.push(buffer);
+			if (!this.mseStarted) {
+				void this.fallbackMsePlayback();
+			}
 			return;
 		}
 
@@ -198,10 +201,28 @@ export class PlaybackManager {
 		this.isSynthesizing = false;
 		this.synthesisPercent = 100;
 		this.synthesisMessage = undefined;
+		if (this.mseMode && !this.mseStarted && this.buffers.length > 0) {
+			void this.fallbackMsePlayback();
+			return;
+		}
 		if (this.mseMode && this.msePlayer) {
 			this.msePlayer.finish();
 		}
 		this.checkStreamingCompletion();
+	}
+
+	private async fallbackMsePlayback(): Promise<void> {
+		if (!this.mseMode || this.mseStarted || this.stopped) return;
+		logInfo("[playback] MSE 无流式数据，回退 Blob 播放");
+		const format = this.streamingFormat;
+		this.msePlayer?.destroy();
+		this.msePlayer = null;
+		this.mseMode = false;
+		this.cleanupAudio(false);
+		this.currentIndex = 0;
+		if (!this.paused && this.buffers.length > 0) {
+			await this.playCurrent(format);
+		}
 	}
 
 	private preloadNextSegment(): void {

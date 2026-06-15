@@ -167,7 +167,12 @@ export class EdgeProvider implements TTSProvider {
 			);
 		}
 
-		return synthesizeDirect(text, voice, options.rate).catch(async (directErr) => {
+		return synthesizeDirect(
+			text,
+			voice,
+			options.rate,
+			options.onStreamChunk
+		).catch(async (directErr) => {
 			if (this.config.proxyUrl.trim()) {
 				logWarnFallback(directErr);
 				if (this.showNotices) {
